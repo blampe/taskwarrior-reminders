@@ -1,0 +1,70 @@
+#!/usr/bin/env python3
+
+"""
+Ensure Taskwarrior's context tags are automatically applied to new tasks.
+Conversely, when tasks are added via Reminders, ensure their list is applied as
+a project and a tag.
+
+Concrete examples:
+
+    If a reminder is created in the "Work" list, then:
+        a task is created with `project:Work` and `+work`.
+
+    If a task is created under the "life" context, then:
+        a reminder is created in the "Life" list, and `+life` is applied.
+
+    If a task is created without a context, then:
+        a reminder is created in the default list, which is also applied as
+        project.
+"""
+
+import re
+import json
+import subprocess
+import sys
+
+
+def get_config():
+    p = subprocess.Popen(["/usr/local/bin/task", "show"], stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+
+    stdout, stderr = [x.decode('utf-8') for x in p.communicate()]
+    raw_output = stdout.rstrip().split('\n')
+
+    config = dict()
+    config_regex = re.compile(r'^(?P<key>[^\s]+)\s+(?P<value>[^\s].*$)')
+
+    for line in raw_output:
+        match = config_regex.match(line)
+        if match:
+            config[match.group('key')] = match.group('value').strip()
+
+    return config
+
+
+def process(task):
+    config = get_config()
+
+    task.setdefault("tags", [])
+
+    if 'project' in task:
+        task['tags'] += [task['project'].lower()]
+
+    context = config.get("context")
+
+    if not context:
+        return
+
+    task['tags'] += [context]
+    task.setdefault('project', context.title())
+
+
+def main(stdin, stdout):
+    task = json.loads(stdin.readline())
+    msg = process(task)
+    print(json.dumps(task))
+    if msg:
+        print('could not add context tag: '+msg)
+
+if __name__ == '__main__':
+    main(sys.stdin, sys.stdout)

@@ -71,7 +71,20 @@ Reminders are detected. This means your local Taskwarrior snapshot should
 stay up to date with your other online Macs, and you can safely remove any
 `cron` jobs or hooks that previously called `task sync` for you.
 
-## A Note on [Taskwarrior Hooks]
+## Notes on [Taskwarrior Hooks]
+
+The tool doesn't take an opinion on projects versus tags... but included is an
+optional hook I find very useful. For Reminders created in the "Life" list it
+will automatically add a `+life` tag; and for tasks created under the "life"
+context it will automatically add them to the "Life" list in reminders.
+Install with something like:
+
+```
+    ln -s $PWD/hooks/on-add.context ~/.task/hooks/on-add.context
+```
+
+(Let me know if you feel strongly the agent should handle this for you
+automatically.)
 
 If you notice reminders are not propagating back to Taskwarrior, it may be
 because you have failing hooks. The agent doesn't run in your shell – so if a
