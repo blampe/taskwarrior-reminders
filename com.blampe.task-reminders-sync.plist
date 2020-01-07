@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-	<dict>
-		<key>KeepAlive</key>
-		<true/>
+    <dict>
+        <key>KeepAlive</key>
+        <true/>
         <key>RunAtLoad</key>
-	    <true/>
-		<key>Label</key>
-		<string>com.blampe.task-reminders-sync</string>
+        <true/>
+        <key>Label</key>
+        <string>com.blampe.task-reminders-sync</string>
         <key>ProcessType</key>
         <string>Background</string>
         <key>ProgramArguments</key>
         <array>
             <string>/usr/local/bin/task-reminders-sync</string>
         </array>
-	</dict>
+    </dict>
 </plist>
