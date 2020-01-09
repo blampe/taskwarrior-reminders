@@ -34,7 +34,7 @@ public class TaskwarriorRepository {
     }
 
     public func deleteFromTaskwarrior(_ t: Task) {
-        execTaskwarrior(args: ["reminderID:" + (t.reminderID ?? "ERROR"), "delete"])
+        execTaskwarrior(args: ["reminderID:" + (t.reminderID ?? "ERROR"), "-COMPLETED", "delete"])
         execTaskwarrior(args: ["sync"])
     }
 
