@@ -80,6 +80,7 @@ public class TaskwarriorRepository {
         let arguments = [
             "rc.uda.reminderID.type=string",
             "rc.confirmation=off",
+            "rc.context=none",
             "rc.recurrence.confirmation=off"
             ] + args
         process.arguments = arguments
