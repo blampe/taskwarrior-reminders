@@ -49,6 +49,7 @@ def process(task):
 
     if 'project' in task:
         task['tags'] += [task['project'].lower()]
+        return
 
     context = config.get("context")
 
