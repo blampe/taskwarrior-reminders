@@ -48,7 +48,7 @@ def process(task):
     task.setdefault("tags", [])
 
     if 'project' in task:
-        task['tags'] += [task['project'].lower()]
+        task['tags'] += [task['project'].lower().replace(" ", "_")]
         return
 
     context = config.get("context")
