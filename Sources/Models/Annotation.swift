@@ -21,7 +21,6 @@ public struct Annotation: Equatable {
 }
 
 public func mergeAnnotationLists(from: [Annotation], into: [Annotation]) -> [Annotation] {
-
     var idx = 0
     var newAnnotations: [Annotation] = []
 

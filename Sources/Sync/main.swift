@@ -29,9 +29,12 @@ private func dawnOfTime() -> Date {
     if CommandLine.arguments.contains("--all") {
         return Date.init(timeIntervalSince1970: 0)
     }
-    return try! FileManager.default.attributesOfItem(
-    atPath: Bundle.main.executablePath!)[FileAttributeKey.modificationDate]
-    as? Date ?? Date()
+    guard let executablePath = Bundle.main.executablePath else {
+        return Date()
+    }
+    let compileDate = try? FileManager.default.attributesOfItem(
+        atPath: executablePath)[FileAttributeKey.modificationDate] as? Date
+    return compileDate ?? Date()
 }
 
 private var store = EKEventStore.init()

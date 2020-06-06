@@ -58,9 +58,12 @@ public class TaskwarriorRepository {
         var tasks: [Task] = []
         let decoder = JSONDecoder()
         let utf8Data = String(decoding: data, as: UTF8.self).data(using: .utf8)!
-        let twtasks = try! decoder.decode([TaskwarriorTask].self, from: utf8Data)
+        guard let twtasks = try? decoder.decode([TaskwarriorTask].self, from: utf8Data) else {
+            print("tasksModifiedSince unable to fetch tasks")
+            return []
+        }
         for twtask in twtasks {
-            if fromTaskwarriorDate(twtask.modified)! >= date {
+            if fromTaskwarriorDate(twtask.modified) ?? date >= date {
                 tasks += [taskwarriorToTask(twtask)]
             }
         }
@@ -202,10 +205,10 @@ public class TaskwarriorRepository {
     }
 
     private func fromTaskwarriorPriority(_ priority: String?) -> Priority {
-        if priority == nil {
+        guard var priority = priority else {
             return Priority.none
         }
-        let priority = priority!.lowercased()
+        priority = priority.lowercased()
 
         switch priority {
         case "l", "low":
@@ -246,13 +249,13 @@ public class TaskwarriorRepository {
     }
 
     private func toTaskwarriorDate(_ d: Date?) -> String? {
-        if d == nil {
+        guard let d = d else {
             return nil
         }
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [
             .withYear, .withMonth, .withDay, .withTime, .withTimeZone]
-        return formatter.string(from: d!)
+        return formatter.string(from: d)
     }
 
     private func fromTaskwarriorDate(_ s: String?) -> Date? {

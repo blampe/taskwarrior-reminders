@@ -43,15 +43,22 @@ public class RemindersRepository {
         _ reminderID: String?,
         commit: Bool=false
     ) -> EKReminder {
+        print("fetchOrCreateExistingReminder")
         if reminderID != nil {
             if let existing = self.store.calendarItem(withIdentifier: reminderID!) as! EKReminder? {
+                print("fetchOrCreateExistingReminder found existing")
                 return existing
             }
         }
         let reminder = EKReminder(eventStore: self.store)
-        let defaultCalendar = self.store.defaultCalendarForNewReminders()!
-        reminder.calendar = defaultCalendar
-        try! self.store.save(reminder, commit: commit)
+        if let defaultCalendar = self.store.defaultCalendarForNewReminders() {
+            reminder.calendar = defaultCalendar
+        }
+        do {
+            try self.store.save(reminder, commit: commit)
+        } catch {
+            print("Error: fetchOrCreateExistingReminder couldn't save reminder")
+        }
         return reminder
     }
 
@@ -69,33 +76,44 @@ public class RemindersRepository {
     }
 
     public func upsertToReminders(task: Task) -> Task {
+        print("upsertToReminders fetchReminderTask")
         let existing = fetchReminderTask(task.reminderID, commit: true)
 
+        print("upsertToReminders synchronizing")
         let syncResult = synchronize(
             updatesFrom: task,
             toOlder: existing
         )
 
         if !syncResult.madeChanges && !syncResult.task.isDeleted() {
+            print("upsertToReminders no changes")
             return syncResult.task
         }
 
         let reminder = taskToReminder(syncResult.task)
 
         if syncResult.madeChanges {
-            try! self.store.save(reminder, commit: true)
+            do {
+                try self.store.save(reminder, commit: true)
+            } catch {
+                print("Error: upsertToReminders unable to save")
+            }
         }
 
         if syncResult.task.isDeleted() {
-            try! self.store.remove(reminder, commit: true)
+            do {
+                try self.store.remove(reminder, commit: true)
+            } catch {
+                print("Error: upsertToReminders unable to remove")
+            }
         }
 
         return syncResult.task
     }
 
-    private func ensureCalendar(name: String?) -> EKCalendar {
-        let defaultCalendar = self.store.defaultCalendarForNewReminders()!
-        guard name != nil else {
+    private func ensureCalendar(name: String?) -> EKCalendar? {
+        let defaultCalendar = self.store.defaultCalendarForNewReminders()
+        guard let name = name else {
             return defaultCalendar
         }
         let calendars = self.store.calendars(for: .reminder)
@@ -105,18 +123,24 @@ public class RemindersRepository {
         }
 
         let calendar = EKCalendar.init(for: .reminder, eventStore: self.store)
-        calendar.title = name!
-        calendar.source = defaultCalendar.source
-        try! self.store.saveCalendar(calendar, commit: true)
-        return calendar
+        calendar.title = name
+        calendar.source = defaultCalendar?.source
+        do {
+            try self.store.saveCalendar(calendar, commit: true)
+            return calendar
+        } catch {
+            print("Error: ensureCalendar")
+            return defaultCalendar
+        }
     }
 
     private func reminderToTask(_ r: EKReminder) -> Task {
+        print("reminderToTask")
         let t = Task.init()
         t.title = r.title
         t.status = fromReminderStatus(r.isCompleted)
         t.priority = fromReminderPriority(UInt(r.priority))
-        t.project = r.calendar!.title
+        t.project = r.calendar?.title ?? "Reminders"
         t.reminderID = r.calendarItemIdentifier
         t.lastModified = r.lastModifiedDate
         t.due = getDueDate(r)
@@ -125,6 +149,7 @@ public class RemindersRepository {
     }
 
     private func taskToReminder(_ t: Task, commit: Bool = false) -> EKReminder {
+        print("taskToReminder")
         let reminder = fetchOrCreateExistingReminder(t.reminderID, commit: commit)
         reminder.title = t.title
         reminder.isCompleted = t.isCompleted()
@@ -204,29 +229,30 @@ public class RemindersRepository {
     }
 
     private func getDueDate(_ r: EKReminder) -> Date? {
-        if r.dueDateComponents == nil {
+        guard let dueDateComponents = r.dueDateComponents else {
             return nil
         }
 
-        let date = Calendar.current.date(from: r.dueDateComponents!)
+        guard let date = Calendar.current.date(from: dueDateComponents) else {
+            return nil
+        }
 
         let alarm = r.alarms?.filter({ alarm in
             alarm.type == .display }).first
 
-        if alarm != nil {
-            return date! + alarm!.relativeOffset
+        guard let unwrappedAlarm = alarm else {
+            return date
         }
-
-        return date
+        return date + unwrappedAlarm.relativeOffset
     }
 
     private func setDueDate(_ r: EKReminder, _ d: Date?) {
-        guard d != nil else {
+        guard let d = d else {
             return
         }
 
         var components = Calendar.current.dateComponents(
-            in: TimeZone.current, from: d!)
+            in: TimeZone.current, from: d)
 
         // Bump start of day notifications to early morning
         if components.hour == 0 && components.minute == 0 && components.second == 0 {

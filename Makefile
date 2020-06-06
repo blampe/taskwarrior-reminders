@@ -1,5 +1,5 @@
 BINARY=task-reminders-sync
-BUILD_FLAGS=-Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker Info.plist
+BUILD_FLAGS=-g -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker Info.plist
 DEBUG_PREFIX=.build/debug
 RELEASE_PREFIX=.build/release
 INSTALL_PREFIX=/usr/local/bin

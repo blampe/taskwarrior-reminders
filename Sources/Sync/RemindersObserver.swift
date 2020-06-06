@@ -27,7 +27,7 @@ public class RemindersObserver {
             // notification to the observer, but if we don't then we
             // potentially write stale data back to TW...
             newKnownReminderIds.insert(reminder.calendarItemIdentifier)
-            if reminder.lastModifiedDate! < self.lastModifiedDate {
+            if reminder.lastModifiedDate ?? Date() < self.lastModifiedDate {
                 return
             }
             nextModifiedDate = max(nextModifiedDate, reminder.lastModifiedDate!)
