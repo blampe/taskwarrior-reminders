@@ -78,6 +78,8 @@ public class TaskwarriorRepository {
 
     private func execTaskwarrior(args: [String], input: Task? = nil) -> Data? {
         let process = Process.init()
+        defer { process.terminate() }
+
         process.launchPath = "/usr/local/bin/task" // TODO: does just "task" work?
 
         let arguments = [
