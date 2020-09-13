@@ -23,8 +23,12 @@ public class TaskwarriorRepository {
         return try! encoder.encode(taskToTaskwarrior(from))
     }
 
-    public func fetchTaskwarriorTask(filter: String) -> Task? {
+    public func syncWithTaskd() {
         execTaskwarrior(args: ["sync"])
+    }
+
+    public func fetchTaskwarriorTask(filter: String) -> Task? {
+        syncWithTaskd()
         guard let data = execTaskwarrior(args: [filter, "export"]) else {
             return nil
         }
@@ -35,7 +39,7 @@ public class TaskwarriorRepository {
 
     public func deleteFromTaskwarrior(_ t: Task) {
         execTaskwarrior(args: ["reminderID:" + (t.reminderID ?? "ERROR"), "-COMPLETED", "delete"])
-        execTaskwarrior(args: ["sync"])
+        syncWithTaskd()
     }
 
     public func upsertToTaskwarrior(_ t: Task) {
@@ -58,7 +62,10 @@ public class TaskwarriorRepository {
         var tasks: [Task] = []
         let decoder = JSONDecoder()
         let utf8Data = String(decoding: data, as: UTF8.self).data(using: .utf8)!
-        let twtasks = try! decoder.decode([TaskwarriorTask].self, from: utf8Data)
+        guard let twtasks = try? decoder.decode([TaskwarriorTask].self, from: utf8Data) else {
+            print("tasksModifiedSince unable to fetch tasks since", date)
+            return []
+        }
         for twtask in twtasks {
             if fromTaskwarriorDate(twtask.modified)! >= date {
                 tasks += [taskwarriorToTask(twtask)]
@@ -70,7 +77,7 @@ public class TaskwarriorRepository {
     private func writeToTaskwarrior(task: Task) {
         let args = ["import", "-"]
         execTaskwarrior(args: args, input: task)
-        execTaskwarrior(args: ["sync"])
+        syncWithTaskd()
     }
 
     private func execTaskwarrior(args: [String], input: Task? = nil) -> Data? {
