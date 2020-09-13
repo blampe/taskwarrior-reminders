@@ -23,6 +23,8 @@ public class Task: Equatable {
     public var notes: [Annotation] = []
     public var tags: [String] = []
 
+    public var UDA: [String: String] = [:]
+
     public init() {}
 
     public static func == (lhs: Task, rhs: Task) -> Bool {
@@ -90,6 +92,7 @@ public func synchronize(updatesFrom: Task, toOlder: Task) -> SyncResult {
     newTask.lastModified = updatesFrom.lastModified
     newTask.notes = mergeAnnotationLists(from: updatesFrom.notes, into: toOlder.notes)
     newTask.tags = mergeTags(from: updatesFrom.tags, into: toOlder.tags)
+    newTask.UDA = mergeUDA(from: updatesFrom.UDA, into: toOlder.UDA)
 
     return SyncResult.init(task: newTask, madeChanges: (toOlder != newTask))
 }
@@ -128,4 +131,8 @@ private func mergeStatus(from: Status, into: Status) -> Status {
     }
 
     return from
+}
+
+private func mergeUDA(from: [String: String], into: [String: String]) -> [String: String] {
+    return into.merging(from) { (current, _) in current }
 }

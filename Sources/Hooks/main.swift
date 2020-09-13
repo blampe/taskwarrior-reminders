@@ -15,26 +15,16 @@
 import AppKit
 import Foundation
 import Repositories
-import EventKit
-import Models
 
-private func main(store: EKEventStore) {
-    let encoder = JSONEncoder()
-
+private func main() {
     let tasks = TaskwarriorRepository()
-    let reminders = RemindersRepository(store)
-    reminders.assertAuthorized()
-
     let string = readLine(strippingNewline: true)!
     let task = tasks.readTask(from: string.data(using: .utf8)!)
-
-    let data = tasks.writeTask(reminders.upsertToReminders(task: task))
+    let data = tasks.writeTask(task)
     print(String(data: data, encoding: .utf8)!)
-
     exit(0)
 }
 
-private let store = EKEventStore.init()
-main(store: store)
+main()
 
 RunLoop.main.run()

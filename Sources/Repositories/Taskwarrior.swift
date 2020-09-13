@@ -8,19 +8,21 @@
 import Foundation
 import Models
 
+import SwiftyJSON
+
 public class TaskwarriorRepository {
     public init () {}
 
     public func readTask(from: Data) -> Task {
-        let decoder = JSONDecoder()
         let utf8Data = String(decoding: from, as: UTF8.self).data(using: .utf8)!
-        let tw = try! decoder.decode(TaskwarriorTask.self, from: utf8Data)
+        let tw = TaskwarriorTask(from: utf8Data)
         return taskwarriorToTask(tw)
     }
 
     public func writeTask(_ from: Task) -> Data {
+        let tw = taskToTaskwarrior(from)
         let encoder = JSONEncoder()
-        return try! encoder.encode(taskToTaskwarrior(from))
+        return try! encoder.encode(tw)
     }
 
     public func syncWithTaskd() {
@@ -32,13 +34,17 @@ public class TaskwarriorRepository {
         guard let data = execTaskwarrior(args: [filter, "export"]) else {
             return nil
         }
-        let decoder = JSONDecoder()
-        guard let tw = (try! decoder.decode([TaskwarriorTask].self, from: data)).first else { return nil }
-        return taskwarriorToTask(tw)
+        for taskData in try! JSON(data: data).arrayValue {
+            return taskwarriorToTask(TaskwarriorTask(from: try! taskData.rawData()))
+        }
+        return nil
     }
 
     public func deleteFromTaskwarrior(_ t: Task) {
-        execTaskwarrior(args: ["reminderID:" + (t.reminderID ?? "ERROR"), "-COMPLETED", "delete"])
+        guard t.reminderID != nil else {
+            return
+        }
+        execTaskwarrior(args: ["reminderID:" + t.reminderID!, "-COMPLETED", "delete"])
         syncWithTaskd()
     }
 
@@ -60,13 +66,14 @@ public class TaskwarriorRepository {
         }
 
         var tasks: [Task] = []
-        let decoder = JSONDecoder()
         let utf8Data = String(decoding: data, as: UTF8.self).data(using: .utf8)!
-        guard let twtasks = try? decoder.decode([TaskwarriorTask].self, from: utf8Data) else {
+        let json = try? JSON(data: utf8Data).arrayValue
+        guard json != nil else {
             print("tasksModifiedSince unable to fetch tasks since", date)
             return []
         }
-        for twtask in twtasks {
+        for subJson in json! {
+            let twtask = TaskwarriorTask(from: try! subJson.rawData())
             if fromTaskwarriorDate(twtask.modified)! >= date {
                 tasks += [taskwarriorToTask(twtask)]
             }
@@ -90,7 +97,9 @@ public class TaskwarriorRepository {
             "rc.uda.reminderID.type=string",
             "rc.confirmation=off",
             "rc.context=none",
-            "rc.recurrence.confirmation=off"
+            "rc.recurrence.confirmation=off",
+            "rc.search.case.sensitive=no",
+            "rc.verbose=nothing"
             ] + args
         process.arguments = arguments
 
@@ -99,7 +108,7 @@ public class TaskwarriorRepository {
         let stdErr = Pipe()
         if input != nil {
             let jsonEncoder = JSONEncoder.init()
-            let data = try! jsonEncoder.encode(taskToTaskwarrior(input!))
+            let data = writeTask(input!)
 
             // Stream input data so we don't deadlock on a full write buffer
             var iter = data.makeIterator()
@@ -134,12 +143,12 @@ public class TaskwarriorRepository {
         return ""
     }
 
-    private struct TaskWarriorAnnotation: Codable {
+    private struct TaskWarriorAnnotation: Encodable {
         var entry: String
         var description: String
     }
 
-    private struct TaskwarriorTask: Codable {
+    private struct TaskwarriorTask: Encodable {
         public var description: String = "new task"
         public var status: String = "pending"
         public var uuid: String = ""
@@ -160,7 +169,78 @@ public class TaskwarriorRepository {
         public var reminderID: String?
         public var reminderListID: String?
 
-        public init() {}
+        public var UDA: [String: String] = [:]
+
+        enum Keys: String, CodingKey {
+            case description, status, uuid, priority, project, modified, due, wait, tags, annotations, reminderID, reminderListID
+        }
+
+        struct DynamicKey: CodingKey {
+            var stringValue: String
+            init?(stringValue: String) {
+                self.stringValue = stringValue
+            }
+            var intValue: Int? { return nil }
+            init?(intValue: Int) { return nil }
+        }
+
+        public init(from data: Data? = nil) {
+            guard data != nil else {
+                return
+            }
+            let json = try! JSON(data: data!)
+            for (key, subJson):(String, JSON) in json {
+                let value = subJson.stringValue
+                switch key {
+                case Keys.description.rawValue:
+                    self.description = value
+                case Keys.status.rawValue:
+                    self.status = value
+                case Keys.uuid.rawValue:
+                    self.uuid = value
+                case Keys.priority.rawValue:
+                    self.priority = value
+                case Keys.project.rawValue:
+                    self.project = value
+                case Keys.modified.rawValue:
+                    self.modified = value
+                case Keys.due.rawValue:
+                    self.due = value
+                case Keys.wait.rawValue:
+                    self.wait = value
+                case Keys.tags.rawValue:
+                    self.tags = subJson.arrayValue.map {$0.stringValue}
+                case Keys.annotations.rawValue:
+                    self.annotations = subJson.arrayValue.map {TaskWarriorAnnotation(entry: $0["entry"].stringValue, description: $0["description"].stringValue)}
+                case Keys.reminderID.rawValue:
+                    self.reminderID = value
+                case Keys.reminderListID.rawValue:
+                    self.reminderListID = value
+                default:
+                    self.UDA[key] = value
+                }
+            }
+        }
+
+        public func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: Keys.self)
+            try container.encode(description, forKey: Keys.description)
+            try container.encode(status, forKey: Keys.status)
+            try container.encode(uuid, forKey: Keys.uuid)
+            try container.encodeIfPresent(priority, forKey: Keys.priority)
+            try container.encodeIfPresent(project, forKey: Keys.project)
+            try container.encodeIfPresent(modified, forKey: Keys.modified)
+            try container.encodeIfPresent(due, forKey: Keys.due)
+            try container.encodeIfPresent(wait, forKey: Keys.wait)
+            try container.encodeIfPresent(tags, forKey: Keys.tags)
+            try container.encodeIfPresent(annotations, forKey: Keys.annotations)
+            try container.encodeIfPresent(reminderID, forKey: Keys.reminderID)
+            try container.encodeIfPresent(reminderListID, forKey: Keys.reminderListID)
+            var udaContainer = encoder.container(keyedBy: DynamicKey.self)
+            for (k, v) in UDA {
+                try udaContainer.encode(v, forKey: DynamicKey(stringValue: k)!)
+            }
+        }
     }
 
     private func taskwarriorToTask(_ tw: TaskwarriorTask) -> Task {
@@ -176,6 +256,7 @@ public class TaskwarriorRepository {
         t.lastModified = fromTaskwarriorDate(tw.modified)
         t.notes = fromTaskwarriorNotes(tw.annotations ?? [])
         t.tags = tw.tags ?? []
+        t.UDA = tw.UDA
         return t
     }
 
@@ -194,6 +275,7 @@ public class TaskwarriorRepository {
 
         tw.reminderID = t.reminderID
         tw.reminderListID = nil //TODO???
+        tw.UDA = t.UDA
         return tw
     }
 
