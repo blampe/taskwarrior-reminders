@@ -63,7 +63,7 @@ public class TaskwarriorRepository {
     }
 
     public func tasksModifiedSince(date: Date) -> [Task] {
-        guard let data = execTaskwarrior(args: ["export"]) else {
+        guard let data = execTaskwarrior(args: ["modified.after:" + toTaskwarriorDate(date)!, "export"]) else {
             return []
         }
 
