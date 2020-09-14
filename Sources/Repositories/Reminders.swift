@@ -68,7 +68,7 @@ public class RemindersRepository {
         semaphore.wait()
     }
 
-    public func upsertToReminders(task: Task) -> Task {
+    public func upsertToReminders(task: Task) -> SyncResult {
         let existing = fetchReminderTask(task.reminderID, commit: true)
 
         let syncResult = synchronize(
@@ -77,7 +77,7 @@ public class RemindersRepository {
         )
 
         if !syncResult.madeChanges && !syncResult.task.isDeleted() {
-            return syncResult.task
+            return syncResult
         }
 
         let reminder = taskToReminder(syncResult.task)
@@ -90,7 +90,7 @@ public class RemindersRepository {
             try! self.store.remove(reminder, commit: true)
         }
 
-        return syncResult.task
+        return syncResult
     }
 
     private func ensureCalendar(name: String?) -> EKCalendar {
@@ -112,7 +112,7 @@ public class RemindersRepository {
     }
 
     private func reminderToTask(_ r: EKReminder) -> Task {
-        let t = Task.init()
+        let t = Task()
         t.title = r.title
         t.status = fromReminderStatus(r.isCompleted)
         t.priority = fromReminderPriority(UInt(r.priority))

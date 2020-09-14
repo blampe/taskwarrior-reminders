@@ -14,9 +14,15 @@ public class RemindersObserver {
     private var knownReminderIDs: Set<String> = []
     private let repo: RemindersRepository
     private let tw: TaskwarriorRepository
+    private var lock: DispatchSemaphore
 
     @objc
     public func storeChanged(notification: Notification) {
+        if self.lock.wait(timeout: DispatchTime.now() + 1) == .timedOut {
+            // TW is currently updating Reminders, don't step on it.
+            return
+        }
+
         var nextModifiedDate = lastModifiedDate
 
         var newKnownReminderIds = Set<String>()
@@ -34,12 +40,12 @@ public class RemindersObserver {
             DispatchQueue.main.async(
                 execute: {
                     print("[Reminders ▶ Taskwarrior]", reminder.title ?? "")
-                    self.tw.upsertToTaskwarrior(
+                    let syncResult = self.tw.upsertToTaskwarrior(
                         self.repo.fetchReminderTask(
                             reminder.calendarItemIdentifier
                         )
                     )
-            }
+                }
             )
         })
 
@@ -48,25 +54,26 @@ public class RemindersObserver {
         for reminderID in deletedReminderIDs {
             DispatchQueue.main.async(
                 execute: {
-                    print("[Reminders ▶ Taskwarrior]")
                     let taskToDelete = self.tw.fetchTaskwarriorTask(
                         filter: "reminderID:" + reminderID
                     )
                     if taskToDelete != nil {
+                        print("[Reminders ▶ Taskwarrior]")
                         self.tw.deleteFromTaskwarrior(taskToDelete!)
                     }
                 }
             )
         }
-
+        self.lock.signal()
         self.lastModifiedDate = nextModifiedDate
         self.knownReminderIDs = newKnownReminderIds
     }
 
-    public init(_ repo: RemindersRepository, syncSince: Date = Date()) {
+    public init(_ repo: RemindersRepository, syncSince: Date = Date(), lock: DispatchSemaphore) {
         self.repo = repo
         self.repo.assertAuthorized()
         self.tw = TaskwarriorRepository.init()
         self.lastModifiedDate = syncSince
+        self.lock = lock
     }
 }

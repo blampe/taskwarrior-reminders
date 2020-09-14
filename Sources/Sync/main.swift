@@ -12,8 +12,9 @@ import Repositories
 private func main(store: EKEventStore) {
     let syncStart = dawnOfTime()
     let reminders = RemindersRepository.init(store)
-    let fsobserver = TaskwarriorObserver(reminders, syncSince: syncStart)
-    let observer = RemindersObserver(reminders, syncSince: syncStart)
+    let lock = DispatchSemaphore(value: 1)
+    let fsobserver = TaskwarriorObserver(reminders, syncSince: syncStart, lock: lock)
+    let observer = RemindersObserver(reminders, syncSince: syncStart, lock: lock)
 
     NotificationCenter.default.addObserver(
         forName: .EKEventStoreChanged,

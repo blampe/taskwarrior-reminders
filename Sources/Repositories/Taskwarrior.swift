@@ -48,16 +48,18 @@ public class TaskwarriorRepository {
         syncWithTaskd()
     }
 
-    public func upsertToTaskwarrior(_ t: Task) {
+    public func upsertToTaskwarrior(_ t: Task) -> SyncResult {
         let existingTask = fetchTaskwarriorTask(
             filter: "reminderID:" + (t.reminderID ?? "")
-            ) ?? Task.init()
+            ) ?? Task()
 
         let syncResult = synchronize(updatesFrom: t, toOlder: existingTask)
 
         if syncResult.madeChanges {
             writeToTaskwarrior(task: syncResult.task)
         }
+
+        return syncResult
     }
 
     public func tasksModifiedSince(date: Date) -> [Task] {
