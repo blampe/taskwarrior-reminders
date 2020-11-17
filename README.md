@@ -80,7 +80,7 @@ context it will automatically add them to the "Life" list in reminders.
 Install with something like:
 
 ```
-    ln -s $PWD/hooks/on-add.context ~/.task/hooks/on-add.context
+    ln -s $PWD/on-add.context ~/.task/hooks/on-add.context
 ```
 
 (Let me know if you feel strongly the agent should handle this for you
