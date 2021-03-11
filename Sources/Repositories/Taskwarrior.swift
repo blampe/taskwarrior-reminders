@@ -93,7 +93,12 @@ public class TaskwarriorRepository {
         let process = Process.init()
         defer { process.terminate() }
 
-        process.launchPath = "/usr/local/bin/task" // TODO: does just "task" work?
+        var taskBinaryPath = "/usr/local/bin/task"
+        if !FileManager.default.isExecutableFile(atPath: taskBinaryPath) {
+            taskBinaryPath = "/opt/homebrew/bin/task"
+        }
+
+        process.launchPath = taskBinaryPath
 
         let arguments = [
             "rc.uda.reminderID.type=string",
