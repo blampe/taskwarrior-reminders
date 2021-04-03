@@ -18,21 +18,22 @@ and after any changes to Reminders are detected.
 Below is a breakdown of how Taskwarrior concepts map to the Reminders data
 model, along with the current status of bi-directional replication support.
 
-| Taskwarrior     | Reminders    |Status|
-|:----------------|:-------------|:----:|
-| Description     | Title        |  ✅  |
-| Project         | List         |  ✅  |
-| Priority        | Priority     |  ✅  |
-| Status          | Completed    |  ✅  |
-| Due             | Notification |  ✅  |
-| Annotations     | Notes        |  ✅  |
-| Deletion        | Deletion     |  ✅  |
-| Urgency         | Sort Order   |  ⚠️   |
-| +next           | Flagged      |  ⚠️   |
-| Dependencies    | Subtasks     |  ⚠️   |
-| Tags            | ???          |  ❌  |
-| Wait            | ???          |  ❌  |
-| UDA             | ???          |  ❌  |
+| Taskwarrior       | Reminders      | Status |
+| :---------------- | :------------- | :----: |
+| Description       | Title          | ✅     |
+| Project           | List           | ✅     |
+| Priority          | Priority       | ✅     |
+| Status            | Completed      | ✅     |
+| Due               | Notification   | ✅     |
+| Annotations       | Notes          | ✅     |
+| Deletion          | Deletion       | ✅     |
+| Urgency           | Sort Order     | ⚠️      |
+| +next             | Flagged        | ⚠️      |
+| Dependencies      | Subtasks       | ⚠️      |
+| Tags              | ???            | ❌     |
+| Wait              | ???            | ❌     |
+| Scheduled         | ???            | ❌     |
+| UDA               | ???            | ❌     |
 
 Legend:
 * ✅ Supported
@@ -96,6 +97,8 @@ login.
 [ ] Deleting a Reminder list with outstanding items in it will cause all of
     the items to be deleted (expected), but the list will be re-created empty.
     Simply delete it again to completely remove it.
+[ ] Apple's Reminders API is not efficient about querying recently modified
+    reminders, so CPU usage will sometime spike.
 
 [Command Line Tools]: https://developer.apple.com/download/more/?=command%20line%20tools
 [Taskwarrior Hooks]: https://taskwarrior.org/docs/hooks_guide.html
