@@ -3,6 +3,7 @@ BUILD_FLAGS=-Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker 
 DEBUG_PREFIX=.build/debug
 RELEASE_PREFIX=.build/release
 INSTALL_PREFIX=/usr/local/bin
+SERVICE=com.blampe.task-reminders-sync
 
 debug:
 	swift build $(BUILD_FLAG)
@@ -16,12 +17,13 @@ release: clean
 install: release uninstall
 	cp $(RELEASE_PREFIX)/$(BINARY) $(BINARY)
 	ln -Fs $(PWD)/$(BINARY) $(INSTALL_PREFIX)/$(BINARY)
-	cp com.blampe.task-reminders-sync.plist ~/Library/LaunchAgents/.
-	launchctl load -w ~/Library/LaunchAgents/com.blampe.task-reminders-sync.plist
+	cp $(SERVICE).plist ~/Library/LaunchAgents/.
+	launchctl load -w ~/Library/LaunchAgents/$(SERVICE).plist
 
 uninstall:
 	rm -f $(INSTALL_PREFIX)/$(BINARY)
-	launchctl remove com.blampe.task-reminders-sync || true
+	launchctl remove $(SERVICE) || true
+	rm ~/Library/LaunchAgents/$(SERVICE).plist || true
 
 run: debug
 	$(DEBUG_PREFIX)/$(BINARY)
