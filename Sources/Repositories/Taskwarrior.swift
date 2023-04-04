@@ -93,9 +93,13 @@ public class TaskwarriorRepository {
         let process = Process.init()
         defer { process.terminate() }
 
-        var taskBinaryPath = "/usr/local/bin/task"
+        var taskBinaryPath = "/usr/local/bin/task" // Default Taskwarrior path.
         if !FileManager.default.isExecutableFile(atPath: taskBinaryPath) {
-            taskBinaryPath = "/opt/homebrew/bin/task"
+            if FileManager.default.isExecutableFile(atPath: "/opt/homebrew/bin/task") {
+               taskBinaryPath = "/opt/homebrew/bin/task" //If Taskwarrior is Homebrew installed
+            } else if FileManager.default.isExecutableFile(atPath: "/opt/local/bin/task") {
+               taskBinaryPath = "/opt/local/bin/task" //If Taskwarrior is Macports installed
+        }
         }
 
         process.launchPath = taskBinaryPath
